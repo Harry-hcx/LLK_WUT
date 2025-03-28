@@ -1,13 +1,10 @@
 import pygame as pg
 import sys
 import random
-import string
-import copy
 import time
 from button import *
 from block import *
 from timer import *
-import live2d.v2 as live2d
 
 WIDTH = 800
 HEIGHT = 600
