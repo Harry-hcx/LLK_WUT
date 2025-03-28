@@ -7,6 +7,7 @@ import time
 from button import *
 from block import *
 from timer import *
+import live2d.v2 as live2d
 
 WIDTH = 800
 HEIGHT = 600
@@ -197,7 +198,7 @@ def play(screen, level_data, width=16, height=10):
             pg.display.flip()
             time.sleep(3)
             running = False
-
+    print(timer.tick)
     return timer.tick
 
 
@@ -220,11 +221,11 @@ def chose_level(screen):
                     width.append(int(f.readline()[:-1]))
                     height.append(int(f.readline()[:-1]))
                     data.append(f.readline()[:-1])
-                    limit.append(int(f.readline()[:-1]))
+                    limit.append(int(f.readline()))
                 level_num += 1
             except:
                 break
-        print("Detected ", level_num, " levels")
+        # print("Detected ", level_num, " levels")
         accepted = []
         try:
             with open("levels/rec.txt", "r") as f:
@@ -243,11 +244,11 @@ def chose_level(screen):
             row = i % 8
             level.append(
                 Button(
-                    50 + column * 80,
                     50 + row * 80,
-                    80,
-                    80,
-                    (255, 250, 240) if accepted[i] == 0 else (238, 59, 59),
+                    50 + column * 80,
+                    60,
+                    60,
+                    [(255, 250, 240), (0, 205, 102), (238, 59, 59)][accepted[i]],
                     str(i + 1),
                     45,
                 )
@@ -268,13 +269,14 @@ def chose_level(screen):
                         accepted[i] = 2
                     else:
                         accepted[i] = 1
+                    print(limit[i])
         with open("levels/rec.txt", "w") as f:
             f.write("".join([str(i) for i in accepted]))
 
 
 def main():
     pg.init()
-    screen = pg.display.set_mode((WIDTH, HEIGHT))
+    screen = pg.display.set_mode((WIDTH, HEIGHT), pg.DOUBLEBUF)
     pg.display.set_caption("连连看")
     icon = pg.image.load("assets/LLK.ico").convert_alpha()
     pg.display.set_icon(icon)

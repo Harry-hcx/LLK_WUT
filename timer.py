@@ -20,7 +20,7 @@ class Timer:
         self.s %= 60
 
     def go(self, x):
-        self.tick += x
+        self.tick += 1
         self.ms += 0.304 * x
         self.calc()
         print(self.toString(), self.tick)
