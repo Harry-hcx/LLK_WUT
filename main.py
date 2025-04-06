@@ -5,6 +5,7 @@ import time
 from button import *
 from block import *
 from timer import *
+from hintline import *
 
 WIDTH = 800
 HEIGHT = 600
@@ -25,7 +26,11 @@ def generate_map(n, m):
 
 
 def check(x1, y1, x2, y2, vis):
-    print(vis)
+    print("checking", x1, y1, x2, y2, vis)
+    ox1 = x1
+    oy1 = y1
+    ox2 = x2
+    oy2 = y2
     n = len(vis)
     m = len(vis[0])
     dx = [0, 1, 0, -1]
@@ -47,7 +52,13 @@ def check(x1, y1, x2, y2, vis):
                 sumy[i][j] += sumy[i - 1][j]
                 sumx[i][j] += sumx[i][j - 1]
     if abs(x1 - x2) + abs(y1 - y2) == 1:
-        return True
+        return [
+            True,
+            (oy1 * 40 + 70, ox1 * 40 + 70),
+            (y1 * 40 + 70, x1 * 40 + 70),
+            (y2 * 40 + 70, x2 * 40 + 70),
+            (oy2 * 40 + 70, ox2 * 40 + 70),
+        ]
     for dir in range(4):
         nx = x1 + dx[dir]
         ny = y1 + dy[dir]
@@ -72,22 +83,61 @@ def check(x1, y1, x2, y2, vis):
         for x2, y2 in map2:
             print(x1, y1, x2, y2, sep=" ")
             if x1 == x2 == -1 or x1 == x2 == n or y1 == y2 == -1 or y1 == y2 == m:
-                return True
+                return [
+                    True,
+                    (oy1 * 40 + 70, ox1 * 40 + 70),
+                    (y1 * 40 + 70, x1 * 40 + 70),
+                    (y2 * 40 + 70, x2 * 40 + 70),
+                    (oy2 * 40 + 70, ox2 * 40 + 70),
+                ]
             if (x1 == x2) and (
                 sumx[x1][max(y1, y2)] - sumx[x1][min(y1, y2)] + vis[x1][min(y1, y2)]
                 == 0
             ):
-                return True
+                return [
+                    True,
+                    (oy1 * 40 + 70, ox1 * 40 + 70),
+                    (y1 * 40 + 70, x1 * 40 + 70),
+                    (y2 * 40 + 70, x2 * 40 + 70),
+                    (oy2 * 40 + 70, ox2 * 40 + 70),
+                ]
             if (y1 == y2) and (
                 sumy[max(x1, x2)][y1] - sumy[min(x1, x2)][y1] + vis[min(x1, x2)][y1]
                 == 0
             ):
-                return True
+                return [
+                    True,
+                    (oy1 * 40 + 70, ox1 * 40 + 70),
+                    (y1 * 40 + 70, x1 * 40 + 70),
+                    (y2 * 40 + 70, x2 * 40 + 70),
+                    (oy2 * 40 + 70, ox2 * 40 + 70),
+                ]
 
-    return False
+    return [False, (-1, -1), (-1, -1)]
 
 
-def play(screen, level_data, width=16, height=10):
+def find_hint(vis, level):
+    n = len(vis)
+    m = len(vis[0])
+    possible_blocks = []
+    for i in range(n):
+        for j in range(m):
+            if vis[i][j] == 0:
+                continue
+            for x in range(i, n):
+                for y in range(j, m):
+                    if i == x and j == y:
+                        continue
+                    if vis[x][y] == 0:
+                        continue
+                    if level[i][j].type == level[x][y].type:
+                        temp = check(i, j, x, y, vis)
+                        if temp[0]:
+                            print(i, j, x, y, temp)
+                            return temp
+
+
+def play(screen, level_data, width=16, height=10, goal=-1, is_relax=False):
     width = min(width, 16)
     height = min(height, 10)
     level_data = level_data[0 : min(160, len(level_data))]
@@ -97,12 +147,15 @@ def play(screen, level_data, width=16, height=10):
     clock = pg.time.Clock()
     ready = True
     deleted = 0
+    hintline = HintLine()
     for i in range(height):
         temp = []
         for j in range(width):
             temp.append(Block(level_data[i * width + j], 50 + j * 40, 50 + i * 40))
         level.append(temp)
     timer = Timer()
+    goal_time = Timer(start=goal)
+    print(goal_time.toString())
     while running:
         screen.fill((0, 0, 0))
         bg = pg.image.load("assets/fruit_bg.bmp")
@@ -111,12 +164,18 @@ def play(screen, level_data, width=16, height=10):
         button_pause = Button(700, 150, text="暂停游戏")
         button_hint = Button(700, 250, text="提示")
         button_rearrange = Button(700, 350, text="重排")
+        if goal != -1:
+            button_goal = Button(
+                600, 550, bg_color=(13, 123, 13), text=(goal_time.toString())
+            )
+            button_goal.draw(screen)
         button_start.draw(screen)
         button_pause.draw(screen)
         button_hint.draw(screen)
         button_rearrange.draw(screen)
         # print(ready)
         events = pg.event.get()
+        hintline.draw(screen)
         for event in events:
             if event.type == pg.QUIT:
                 pg.quit()
@@ -138,7 +197,8 @@ def play(screen, level_data, width=16, height=10):
         for i in range(height):
             for j in range(width):
                 level[i][j].draw(screen)
-        timer.draw(screen)
+        if not is_relax:
+            timer.draw(screen)
         pg.display.flip()
         clock.tick(60)
         for event in events:
@@ -160,6 +220,21 @@ def play(screen, level_data, width=16, height=10):
                             Block(level_data[i * width + j], 50 + j * 40, 50 + i * 40)
                         )
                     level.append(temp)
+            if button_hint.is_clicked(event):
+                print("hint")
+                answer = find_hint(
+                    [
+                        [int(level[i][j].is_visible) for j in range(width)]
+                        for i in range(height)
+                    ],
+                    level,
+                )
+                try:
+                    hintline.update(answer[1:])
+                except:
+                    hintline.update(
+                        [(700, 350), (700, 400), (790, 400), (790, 350), (700, 350)]
+                    )
 
         chosen = []
         for i in range(height):
@@ -177,13 +252,14 @@ def play(screen, level_data, width=16, height=10):
                         [int(level[i][j].is_visible) for j in range(width)]
                         for i in range(height)
                     ],
-                )
+                )[0]
                 and level[chosen[0][0]][chosen[0][1]].type
                 == level[chosen[1][0]][chosen[1][1]].type
             ):
                 level[chosen[0][0]][chosen[0][1]].set_invisible()
                 level[chosen[1][0]][chosen[1][1]].set_invisible()
                 deleted += 2
+                hintline.dead()
             else:
                 level[chosen[0][0]][chosen[0][1]].is_chosen = False
                 level[chosen[1][0]][chosen[1][1]].is_chosen = False
@@ -262,7 +338,7 @@ def chose_level(screen):
                 running = False
             for i in range(level_num):
                 if level[i].is_clicked(event):
-                    if play(screen, data[i], width[i], height[i]) > limit[i]:
+                    if play(screen, data[i], width[i], height[i], limit[i]) > limit[i]:
                         accepted[i] = 2
                     else:
                         accepted[i] = 1
@@ -312,6 +388,17 @@ def main():
                 play(screen, random_str, width=random_width, height=random_height)
             if button_level.is_clicked(event):
                 chose_level(screen)
+            if button_relax.is_clicked(event):
+                random_width = 4
+                random_height = 4
+                random_str = generate_map(random_width, random_height)
+                play(
+                    screen,
+                    random_str,
+                    width=random_width,
+                    height=random_height,
+                    is_relax=True,
+                )
 
 
 if __name__ == "__main__":
