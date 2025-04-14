@@ -140,7 +140,7 @@ def find_hint(vis, level):
 def play(screen, level_data, width=16, height=10, goal=-1, is_relax=False):
     width = min(width, 16)
     height = min(height, 10)
-    level_data = level_data[0 : min(160, len(level_data))]
+    level_data = generate_map(width, height)
     running = True
     level = []
     visit = [[False for i in range(width)] for i in range(height)]
@@ -164,6 +164,7 @@ def play(screen, level_data, width=16, height=10, goal=-1, is_relax=False):
         button_pause = Button(700, 150, text="暂停游戏")
         button_hint = Button(700, 250, text="提示")
         button_rearrange = Button(700, 350, text="重排")
+        button_exit = Button(700, 450, bg_color=(255, 0, 0), text="退出")
         if goal != -1:
             button_goal = Button(
                 600, 550, bg_color=(13, 123, 13), text=(goal_time.toString())
@@ -173,6 +174,7 @@ def play(screen, level_data, width=16, height=10, goal=-1, is_relax=False):
         button_pause.draw(screen)
         button_hint.draw(screen)
         button_rearrange.draw(screen)
+        button_exit.draw(screen)
         # print(ready)
         events = pg.event.get()
         hintline.draw(screen)
@@ -182,11 +184,14 @@ def play(screen, level_data, width=16, height=10, goal=-1, is_relax=False):
                 sys.exit()
             if button_start.is_clicked(event):
                 ready = False
+            if button_exit.is_clicked(event):
+                return
             if button_pause.is_clicked(event):
                 ready = not ready
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_SPACE:
                     ready = not ready
+
         if ready:
             lock = pg.image.load("assets/lock.png")
             screen.blit(lock, (100, 100))
